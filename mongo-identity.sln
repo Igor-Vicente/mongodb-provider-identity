@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Store.MongoDb.Identity", "src\Store.MongoDb.Identity.csproj", "{1E2EE262-A02F-4467-9FCD-1654BDC24CEE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E2EE262-A02F-4467-9FCD-1654BDC24CEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E2EE262-A02F-4467-9FCD-1654BDC24CEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E2EE262-A02F-4467-9FCD-1654BDC24CEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E2EE262-A02F-4467-9FCD-1654BDC24CEE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
