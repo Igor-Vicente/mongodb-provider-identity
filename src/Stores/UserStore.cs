@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Store.MongoDb.Identity.Models.Interfaces;
 using System.ComponentModel;
@@ -514,10 +515,11 @@ namespace Store.MongoDb.Identity.Stores
 
         public virtual TKey ConvertIdFromString(string id)
         {
-            if (id == null)
-            {
-                return default;
-            }
+            if (id == null) return default;
+
+            if (typeof(TKey) == typeof(ObjectId))
+                return (TKey)(object)ObjectId.Parse(id);
+
             return (TKey)TypeDescriptor.GetConverter(typeof(TKey)).ConvertFromInvariantString(id);
         }
 
