@@ -4,6 +4,17 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	  
+	<PackageId>IVM.MongoDb.Identity.Provider</PackageId>
+	<Version>1.0.0</Version>
+	<Authors>Igor Vicente</Authors>
+	<RepositoryUrl>https://github.com/Igor-Vicente/mongodb-provider-identity</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/Igor-Vicente/mongodb-provider-identity</PackageProjectUrl>
+	<PackageDescription>Identity Custom Storage Providers</PackageDescription>
+	<Description>
+		Not all identity User interfaces are implement. I'm adding the interfaces and customizing it as needed.
+		Identity Custom Storage Providers - https://learn.microsoft.com/pt-br/aspnet/core/security/authentication/identity-custom-storage-providers?view=aspnetcore-8.0
+	</Description>
   </PropertyGroup>
 
   <ItemGroup>
