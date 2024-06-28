@@ -6,7 +6,7 @@ namespace Store.MongoDb.Identity.Utils
     {
         public static IMongoCollection<TItem> SetCollection<TItem>(MongoOptions options, string collectionName)
         {
-            var client = new MongoClient();
+            var client = new MongoClient(options.ConnectionString);
             var db = client.GetDatabase(options.DatabaseName);
             return db.GetCollection<TItem>(collectionName);
         }
