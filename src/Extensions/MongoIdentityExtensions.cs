@@ -13,7 +13,7 @@ namespace Store.MongoDb.Identity.Extensions
             IdentityErrorDescriber identityErrorDescriber = null!)
             where TKey : IEquatable<TKey>
             where TRole : MongoRole<TKey>
-            where TUser : MongoUser<TKey>, IIdentityUserClaim, IIdentityUserRole
+            where TUser : MongoUser<TKey>, IIdentityUserClaim, IIdentityUserRole, IIdentityUserLogin
         {
             var dbOptions = new MongoOptions();
             mongoDbOptions(dbOptions);

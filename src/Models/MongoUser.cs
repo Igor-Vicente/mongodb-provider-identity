@@ -5,7 +5,7 @@ using Store.MongoDb.Identity.Models.Interfaces;
 
 namespace Store.MongoDb.Identity.Models
 {
-    public class MongoUser : MongoUser<ObjectId>, IIdentityUserClaim, IIdentityUserRole
+    public class MongoUser : MongoUser<ObjectId>, IIdentityUserClaim, IIdentityUserRole, IIdentityUserLogin
     {
         public MongoUser() { }
         public MongoUser(string userName) : base(userName) { }
@@ -25,5 +25,7 @@ namespace Store.MongoDb.Identity.Models
         public List<string> Roles { get; set; } = new();
 
         public List<IdentityUserClaim<string>> Claims { get; set; } = new();
+
+        public List<IdentityUserLogin<string>> Logins { get; set; } = new();
     }
 }
