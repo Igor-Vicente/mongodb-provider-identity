@@ -12,10 +12,11 @@ namespace Store.MongoDb.Identity.Stores
                                                  IUserClaimStore<TUser>,
                                                  IUserRoleStore<TUser>,
                                                  IUserEmailStore<TUser>,
-                                                 IUserLockoutStore<TUser>
+                                                 IUserLockoutStore<TUser>,
+                                                 IUserLoginStore<TUser>
         where TKey : IEquatable<TKey>
         where TRole : IdentityRole<TKey>
-        where TUser : IdentityUser<TKey>, IIdentityUserClaim, IIdentityUserRole
+        where TUser : IdentityUser<TKey>, IIdentityUserClaim, IIdentityUserRole, IIdentityUserLogin
 
     {
 
@@ -55,7 +56,7 @@ namespace Store.MongoDb.Identity.Stores
 
             if (user == null) throw new ArgumentNullException(nameof(user));
 
-            await _userCollection.InsertOneAsync(user, InsertOneOptions, cancellationToken).ConfigureAwait(false);
+            await _userCollection.InsertOneAsync(user, InsertOneOptions, cancellationToken);
 
             return IdentityResult.Success;
         }
@@ -69,9 +70,7 @@ namespace Store.MongoDb.Identity.Stores
 
             var result = await _userCollection.DeleteOneAsync(x => x.Id.Equals(user.Id) && x.ConcurrencyStamp.Equals(user.ConcurrencyStamp), cancellationToken).ConfigureAwait(false);
             if (!result.IsAcknowledged || result.DeletedCount == 0)
-            {
                 return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
 
             return IdentityResult.Success;
         }
@@ -81,7 +80,7 @@ namespace Store.MongoDb.Identity.Stores
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
 
-            return ByIdAsync(ConvertIdFromString(userId));
+            return ByIdAsync(ConvertIdFromString(userId), cancellationToken);
         }
 
         public Task<TUser?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
@@ -89,7 +88,7 @@ namespace Store.MongoDb.Identity.Stores
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
 
-            return _userCollection.Find(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
+            return _userCollection.Find(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync(cancellationToken);
         }
 
         public Task<string?> GetNormalizedUserNameAsync(TUser user, CancellationToken cancellationToken)
@@ -158,9 +157,8 @@ namespace Store.MongoDb.Identity.Stores
 
             var result = await _userCollection.ReplaceOneAsync(u => u.Id.Equals(user.Id) && u.ConcurrencyStamp.Equals(currentConcurrencyStamp), user, cancellationToken: cancellationToken);
             if (!result.IsAcknowledged || result.ModifiedCount == 0)
-            {
                 return IdentityResult.Failed(ErrorDescriber.ConcurrencyFailure());
-            }
+
             return IdentityResult.Success;
         }
 
@@ -203,7 +201,7 @@ namespace Store.MongoDb.Identity.Stores
 
             if (user == null) throw new ArgumentNullException(nameof(user));
 
-            var dbUser = await ByIdAsync(user.Id);
+            var dbUser = await ByIdAsync(user.Id, cancellationToken);
             return dbUser?.Claims?.Select(x => new Claim(x.ClaimType, x.ClaimValue))?.ToList() ?? new List<Claim>();
         }
 
@@ -256,9 +254,7 @@ namespace Store.MongoDb.Identity.Stores
             if (claims == null) throw new ArgumentNullException(nameof(claims));
 
             foreach (var claim in claims)
-            {
                 user.Claims.RemoveAll(x => x.ClaimType == claim.Type && x.ClaimValue == claim.Value);
-            }
 
             return Task.CompletedTask;
         }
@@ -269,7 +265,7 @@ namespace Store.MongoDb.Identity.Stores
             ThrowIfDisposed();
 
             if (claim == null) throw new ArgumentNullException(nameof(claim));
-            return await _userCollection.Find(u => u.Claims.Any(c => c.ClaimType == claim.Type && c.ClaimValue == claim.Value)).ToListAsync();
+            return await _userCollection.Find(u => u.Claims.Any(c => c.ClaimType == claim.Type && c.ClaimValue == claim.Value)).ToListAsync(cancellationToken);
         }
 
         public async Task AddToRoleAsync(TUser user, string roleName, CancellationToken cancellationToken)
@@ -280,11 +276,9 @@ namespace Store.MongoDb.Identity.Stores
             if (user == null) throw new ArgumentNullException(nameof(user));
             if (string.IsNullOrWhiteSpace(roleName)) throw new ArgumentNullException("Value cannot be null or empty.", nameof(roleName));
 
-            var roleEntity = await FindRoleAsync(roleName);
+            var roleEntity = await FindRoleAsync(roleName, cancellationToken);
             if (roleEntity == null)
-            {
                 throw new InvalidOperationException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Role {0} does not exist.", roleName));
-            }
 
             user.Roles.Add(ConvertIdToString(roleEntity.Id));
         }
@@ -297,11 +291,9 @@ namespace Store.MongoDb.Identity.Stores
             if (user == null) throw new ArgumentNullException(nameof(user));
             if (string.IsNullOrWhiteSpace(roleName)) throw new ArgumentNullException("Value cannot be null or empty.", nameof(roleName));
 
-            var roleEntity = await FindRoleAsync(roleName);
+            var roleEntity = await FindRoleAsync(roleName, cancellationToken);
             if (roleEntity != null)
-            {
                 user.Roles.Remove(ConvertIdToString(roleEntity.Id));
-            }
         }
 
         public async Task<IList<string>> GetRolesAsync(TUser user, CancellationToken cancellationToken)
@@ -311,18 +303,16 @@ namespace Store.MongoDb.Identity.Stores
 
             if (user == null) throw new ArgumentNullException(nameof(user));
 
-            var userDb = await ByIdAsync(user.Id);
+            var userDb = await ByIdAsync(user.Id, cancellationToken);
             if (userDb == null) return new List<string>();
 
             var roles = new List<string>();
             foreach (var item in userDb.Roles)
             {
-                var dbRole = await _roleCollection.Find(r => r.Id.Equals(ConvertIdFromString(item))).FirstOrDefaultAsync();
+                var dbRole = await _roleCollection.Find(r => r.Id.Equals(ConvertIdFromString(item))).FirstOrDefaultAsync(cancellationToken);
 
                 if (dbRole != null)
-                {
                     roles.Add(dbRole.Name);
-                }
             }
             return roles;
         }
@@ -334,9 +324,9 @@ namespace Store.MongoDb.Identity.Stores
 
             if (user == null) throw new ArgumentNullException(nameof(user));
 
-            var dbUser = await ByIdAsync(user.Id).ConfigureAwait(true);
+            var dbUser = await ByIdAsync(user.Id, cancellationToken);
 
-            var role = await FindRoleAsync(roleName).ConfigureAwait(true);
+            var role = await FindRoleAsync(roleName, cancellationToken);
 
             if (role == null) return false;
 
@@ -350,11 +340,11 @@ namespace Store.MongoDb.Identity.Stores
 
             if (string.IsNullOrEmpty(roleName)) throw new ArgumentNullException(nameof(roleName));
 
-            var role = await FindRoleAsync(roleName);
+            var role = await FindRoleAsync(roleName, cancellationToken);
             if (role == null) return new List<TUser>();
 
             var filter = Builders<TUser>.Filter.AnyEq(x => x.Roles, ConvertIdToString(role.Id));
-            return (await _userCollection.FindAsync(filter, FindOptions, cancellationToken).ConfigureAwait(true)).ToList();
+            return (await _userCollection.FindAsync(filter, FindOptions, cancellationToken)).ToList();
         }
 
         public Task<DateTimeOffset?> GetLockoutEndDateAsync(TUser user, CancellationToken cancellationToken)
@@ -478,7 +468,7 @@ namespace Store.MongoDb.Identity.Stores
             cancellationToken.ThrowIfCancellationRequested();
             ThrowIfDisposed();
 
-            return await _userCollection.Find(u => u.NormalizedEmail == normalizedEmail).FirstOrDefaultAsync();
+            return await _userCollection.Find(u => u.NormalizedEmail == normalizedEmail).FirstOrDefaultAsync(cancellationToken);
         }
 
         public Task<string?> GetNormalizedEmailAsync(TUser user, CancellationToken cancellationToken)
@@ -503,14 +493,67 @@ namespace Store.MongoDb.Identity.Stores
             return Task.CompletedTask;
         }
 
-        private Task<TRole> FindRoleAsync(string normalizedRoleName)
+        private Task<TRole> FindRoleAsync(string normalizedRoleName, CancellationToken cancellationToken)
         {
-            return _roleCollection.Find(x => x.NormalizedName == normalizedRoleName).FirstOrDefaultAsync();
+            return _roleCollection.Find(x => x.NormalizedName == normalizedRoleName).FirstOrDefaultAsync(cancellationToken);
         }
 
-        private async Task<TUser> ByIdAsync(TKey id)
+        public Task AddLoginAsync(TUser user, UserLoginInfo login, CancellationToken cancellationToken)
         {
-            return await _userCollection.Find(x => x.Id.Equals(id)).FirstOrDefaultAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            if (login == null) throw new ArgumentNullException(nameof(login));
+
+            var iul = new IdentityUserLogin<string>
+            {
+                UserId = ConvertIdToString(user.Id),
+                LoginProvider = login.LoginProvider,
+                ProviderDisplayName = login.ProviderDisplayName,
+                ProviderKey = login.ProviderKey
+            };
+
+            user.Logins.Add(iul);
+
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveLoginAsync(TUser user, string loginProvider, string providerKey, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            user.Logins.RemoveAll(x => x.LoginProvider == loginProvider && x.ProviderKey == providerKey);
+
+            return Task.CompletedTask;
+        }
+
+        public async Task<IList<UserLoginInfo>> GetLoginsAsync(TUser user, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            var dbUser = await ByIdAsync(user.Id, cancellationToken);
+
+            return dbUser?.Logins?.Select(x => new UserLoginInfo(x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))?.ToList() ?? new List<UserLoginInfo>();
+        }
+
+        public async Task<TUser?> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfDisposed();
+            return await _userCollection.Find(u => u.Logins.Any(l => l.LoginProvider == loginProvider && l.ProviderKey == providerKey))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        private async Task<TUser> ByIdAsync(TKey id, CancellationToken cancellationToken)
+        {
+            return await _userCollection.Find(x => x.Id.Equals(id)).FirstOrDefaultAsync(cancellationToken);
         }
 
         public virtual TKey ConvertIdFromString(string id)
